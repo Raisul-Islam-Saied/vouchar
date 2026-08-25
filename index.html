@@ -80,10 +80,10 @@
 
         /* Inner Content Styling for the Voucher */
         .v-container {
-            padding: 15px 20px;
-            height: calc(100% - 30px); /* INCREASED: margin for borders */
+            padding: 20px 25px;
+            height: calc(100% - 40px);
             border: 2px solid #000;
-            margin: 15px; /* INCREASED: margin around the border */
+            margin: 20px;
             font-family: 'Tiro Bangla', serif;
             color: #000;
             display: flex;
@@ -95,14 +95,14 @@
         .v-header {
             text-align: center;
             border-bottom: 2px solid #000;
-            padding-bottom: 30px; /* INCREASED: Space before the bottom border */
+            padding-bottom: 35px;
             margin-bottom: 0;
         }
 
         .v-title-wrap {
             text-align: center;
-            margin-top: -18px; /* Centered exactly on the line */
-            margin-bottom: 30px; /* INCREASED: Space below the title */
+            margin-top: -16px;
+            margin-bottom: 35px;
         }
 
         .v-title-box {
@@ -162,7 +162,7 @@
         @media print {
             @page {
                 size: A5;
-                margin: 5mm;
+                margin: 15mm;
             }
             body {
                 background-color: #fff;
@@ -750,8 +750,22 @@
             let tbodyHtml = '';
             let grandTotal = 0;
 
+            const benToEngMap = {'০':'0','১':'1','২':'2','৩':'3','৪':'4','৫':'5','৬':'6','৭':'7','৮':'8','৯':'9'};
+
             state.items.forEach((item, index) => {
-                const total = Number(item.rate) || 0;
+                // Extract number from qtyStr for multiplication (e.g., "৬৭ টি" -> 67)
+                let qtyVal = 1;
+                if (item.qtyStr) {
+                    let engStr = String(item.qtyStr).replace(/[০-৯]/g, m => benToEngMap[m]);
+                    let extracted = engStr.match(/[\d.]+/);
+                    if (extracted) {
+                        qtyVal = parseFloat(extracted[0]);
+                    }
+                }
+                
+                const rateVal = Number(item.rate) || 0;
+                const total = qtyVal * rateVal;
+                
                 grandTotal += total;
 
                 tbodyHtml += `
