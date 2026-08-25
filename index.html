@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ভাউচার জেনারেটর প্রো</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts for Bengali -->
+    <link href="https://fonts.googleapis.com/css2?family=Tiro+Bangla:ital@0;1&family=Noto+Sans+Bengali:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- html2pdf for rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    },
+                    fontFamily: {
+                        'bangla-serif': ['"Tiro Bangla"', 'serif'],
+                        'bangla-sans': ['"Noto Sans Bengali"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Noto Sans Bengali', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        /* Hide scrollbar for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 
+         * Voucher Paper Styling (A5 Proportions)
+         */
+        
+        .voucher-preview {
+            background-color: white;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            position: relative;
+            margin: 0 auto;
+            box-sizing: border-box;
+        }
+
+        .a5-portrait {
+            width: 148mm;
+            height: 210mm;
+            max-width: 100%;
+        }
+
+        .a5-landscape {
+            width: 210mm;
+            height: 148mm;
+            max-width: 100%;
+        }
+
+        /* Inner Content Styling for the Voucher */
+        .v-container {
+            padding: 15px 20px;
+            height: calc(100% - 30px); /* INCREASED: margin for borders */
+            border: 2px solid #000;
+            margin: 15px; /* INCREASED: margin around the border */
+            font-family: 'Tiro Bangla', serif;
+            color: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-sizing: border-box;
+        }
+
+        .v-header {
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 30px; /* INCREASED: Space before the bottom border */
+            margin-bottom: 0;
+        }
+
+        .v-title-wrap {
+            text-align: center;
+            margin-top: -18px; /* Centered exactly on the line */
+            margin-bottom: 30px; /* INCREASED: Space below the title */
+        }
+
+        .v-title-box {
+            background: #fff;
+            padding: 2px 15px;
+            font-weight: bold;
+            border: 2px solid #000;
+            border-radius: 4px;
+            display: inline-block;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+
+        .v-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .v-table th, .v-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+        }
+
+        .v-table th {
+            background-color: #f3f4f6 !important; /* Force gray bg on print */
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .v-signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            padding: 0 10px;
+        }
+
+        .v-sig-box {
+            text-align: center;
+            width: 30%;
+        }
+
+        .v-sig-line {
+            border-top: 1px dashed #000;
+            padding-top: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* Custom Modal Styling */
+        #customModal {
+            display: none;
+            backdrop-filter: blur(4px);
+        }
+
+        /* Print Specific Styling */
+        @media print {
+            @page {
+                size: A5;
+                margin: 5mm;
+            }
+            body {
+                background-color: #fff;
+                margin: 0;
+                padding: 0;
+            }
+            body * {
+                visibility: hidden;
+            }
+            #printArea, #printArea * {
+                visibility: visible;
+            }
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                box-shadow: none;
+            }
+            /* Reset padding/margin for actual print */
+            .v-container {
+                margin: 0;
+                height: 100%;
+                border: 2px solid #000 !important;
+                box-sizing: border-box;
+                page-break-inside: avoid;
+            }
+            .a5-portrait, .a5-landscape { 
+                width: 100% !important;
+                height: 100% !important;
+                min-height: auto !important;
+            }
+            /* Ensure background colors print */
+            .v-table th {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Navbar -->
+    <header class="bg-white shadow-sm border-b z-10 px-6 py-3 flex justify-between items-center shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-brand-500 text-white p-2 rounded-lg">
+                <i class="fas fa-file-invoice-dollar text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold text-gray-800 leading-tight">ভাউচার জেনারেটর</h1>
+                <p class="text-xs text-gray-500">প্রফেশনাল মানি রিসিট ও ক্যাশ ভাউচার তৈরি করুন</p>
+            </div>
+        </div>
+        <div class="flex gap-3">
+            <button id="btnReset" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors flex items-center">
+                <i class="fas fa-rotate-right mr-2"></i> রিসেট
+            </button>
+            <button id="btnPrint" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center">
+                <i class="fas fa-print mr-2"></i> সরাসরি প্রিন্ট
+            </button>
+            <button id="btnDownloadPdf" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-lg hover:bg-brand-700 transition-colors shadow-sm flex items-center">
+                <i class="fas fa-download mr-2"></i> PDF ডাউনলোড
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Sidebar: Controls & Inputs -->
+        <div class="w-1/3 bg-white border-r flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10">
+            <div class="p-6 overflow-y-auto no-scrollbar flex-1 space-y-8">
+                
+                <!-- Section: Organization Info -->
+                <section>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center border-b pb-2">
+                        <i class="fas fa-building mr-2 text-brand-500"></i> প্রতিষ্ঠানের তথ্য
+                    </h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">প্রতিষ্ঠানের নাম</label>
+                            <input type="text" id="inpOrgName" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 p-2 border bg-gray-50 focus:bg-white transition-colors">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ঠিকানা / সাব-টাইটেল</label>
+                            <input type="text" id="inpSubTitle" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 p-2 border bg-gray-50 focus:bg-white transition-colors">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Voucher Details -->
+                <section>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center border-b pb-2">
+                        <i class="fas fa-file-signature mr-2 text-brand-500"></i> ভাউচারের বিবরণ
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ভাউচারের ধরন</label>
+                            <input type="text" id="inpVoucherType" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 p-2 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">তারিখ</label>
+                            <input type="text" id="inpDate" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 p-2 border">
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">ভাউচার নং (ঐচ্ছিক)</label>
+                            <input type="text" id="inpVoucherNo" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 p-2 border">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">প্রাপকের নাম</label>
+                            <input type="text" id="inpReceiver" class="w-full border-gray-300 rounded-md shadow-sm focus:ring-brand-500 focus:border-brand-500 p-2 border">
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section: Items -->
+                <section>
+                    <div class="flex justify-between items-center border-b pb-2 mb-4">
+                        <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                            <i class="fas fa-list-ul mr-2 text-brand-500"></i> খরচের বিবরণ
+                        </h3>
+                        <button id="btnAddItem" class="text-xs bg-brand-100 text-brand-700 px-2 py-1 rounded hover:bg-brand-200 transition-colors font-medium">
+                            <i class="fas fa-plus mr-1"></i> নতুন যোগ করুন
+                        </button>
+                    </div>
+                    
+                    <div id="itemsContainer" class="space-y-3">
+                        <!-- Items will be injected here via JS -->
+                    </div>
+                </section>
+
+                <!-- Section: Signatures & Layout -->
+                <section>
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center border-b pb-2">
+                        <i class="fas fa-pen-nib mr-2 text-brand-500"></i> অন্যান্য সেটিংস
+                    </h3>
+                    
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">পৃষ্ঠার লেআউট (A5)</label>
+                        <div class="flex rounded-md shadow-sm" role="group">
+                            <button type="button" id="layoutPortrait" class="flex-1 px-4 py-2 text-sm font-medium rounded-l-lg border bg-brand-50 border-brand-500 text-brand-700 z-10">
+                                লম্বালম্বি (Portrait)
+                            </button>
+                            <button type="button" id="layoutLandscape" class="flex-1 px-4 py-2 text-sm font-medium rounded-r-lg border border-gray-200 bg-white text-gray-900 hover:bg-gray-100">
+                                আড়াআড়ি (Landscape)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-2">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">স্বাক্ষর ১</label>
+                            <input type="text" id="inpSig1" class="w-full text-sm border-gray-300 rounded shadow-sm focus:ring-brand-500 p-1.5 border">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">স্বাক্ষর ২</label>
+                            <input type="text" id="inpSig2" class="w-full text-sm border-gray-300 rounded shadow-sm focus:ring-brand-500 p-1.5 border">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700 mb-1">স্বাক্ষর ৩</label>
+                            <input type="text" id="inpSig3" class="w-full text-sm border-gray-300 rounded shadow-sm focus:ring-brand-500 p-1.5 border">
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Spacer for scrolling padding -->
+                <div class="h-10"></div>
+            </div>
+        </div>
+
+        <!-- Right Main: Live Preview area -->
+        <div class="w-2/3 bg-gray-200 overflow-y-auto flex items-start justify-center p-8">
+            
+            <!-- This is the actual element that will be printed/converted to PDF -->
+            <div id="printArea" class="voucher-preview a5-portrait transition-all duration-300">
+                <div class="v-container flex flex-col justify-between">
+                    
+                    <div>
+                        <!-- Header -->
+                        <div class="v-header">
+                            <h1 id="outOrgName" class="text-2xl font-bold mb-1 tracking-wide">আবদুর রাজ্জাক দাখিল মাদ্রাসা</h1>
+                            <p id="outSubTitle" class="text-base">মীরেরখীল, সরফভাটা, রাঙ্গুনিয়া, চট্টগ্রাম</p>
+                        </div>
+                        
+                        <!-- Title -->
+                        <div class="v-title-wrap">
+                            <span id="outVoucherType" class="v-title-box">ক্যাশ ভাউচার</span>
+                        </div>
+
+                        <!-- Info Row (Voucher No, Receiver, Date) - Inline Styling fixed -->
+                        <div class="flex justify-between mt-4 mb-6 text-[11pt] leading-relaxed">
+                            <div class="w-[65%]">
+                                <div class="flex items-end mb-2">
+                                    <span class="font-bold mr-2 whitespace-nowrap">ভাউচার নং:</span> 
+                                    <span id="outVoucherNo" class="border-b border-dashed border-gray-800 flex-grow pb-0.5">&nbsp;</span>
+                                </div>
+                                <div class="flex items-end">
+                                    <span class="font-bold mr-2 whitespace-nowrap">প্রাপকের নাম:</span> 
+                                    <span id="outReceiver" class="border-b border-dashed border-gray-800 flex-grow pb-0.5">&nbsp;</span>
+                                </div>
+                            </div>
+                            <div class="w-[30%] flex flex-col items-end">
+                                <div class="flex items-end">
+                                    <span class="font-bold mr-2 whitespace-nowrap">তারিখ:</span> 
+                                    <span id="outDate" class="pb-0.5">২৫/০৮/২০২৬</span> <span class="ml-1">ইং</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Items Table -->
+                        <table class="v-table text-[10pt]">
+                            <thead>
+                                <tr>
+                                    <th style="width: 8%;">ক্র.নং</th>
+                                    <th style="width: 47%; text-align: left;">খরচের বিবরণ</th>
+                                    <th style="width: 15%;">পরিমাণ</th>
+                                    <th style="width: 15%;">হার (৳)</th>
+                                    <th style="width: 15%; text-align: right;">মোট টাকা</th>
+                                </tr>
+                            </thead>
+                            <tbody id="outItemsBody">
+                                <!-- Rows injected by JS -->
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="4" class="text-right py-2">সর্বমোট:</th>
+                                    <th id="outGrandTotal" class="text-right py-2 font-bold text-lg">0.00</th>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <!-- In Words -->
+                        <div class="mt-4 text-[11pt] border-b border-dotted border-gray-600 inline-block pb-1">
+                            <span class="font-bold">কথায়:</span> <span id="outInWords">শূন্য টাকা মাত্র।</span>
+                        </div>
+                    </div>
+
+                    <!-- Signatures -->
+                    <div class="v-signatures mt-10">
+                        <div class="v-sig-box">
+                            <div id="outSig1" class="v-sig-line">গ্রহীতার স্বাক্ষর</div>
+                        </div>
+                        <div class="v-sig-box">
+                            <div id="outSig2" class="v-sig-line">হিসাবরক্ষক</div>
+                        </div>
+                        <div class="v-sig-box">
+                            <div id="outSig3" class="v-sig-line">সুপারিনটেনডেন্ট</div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+            
+        </div>
+    </main>
+
+    <!-- Custom Modal instead of alert/confirm -->
+    <div id="customModal" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-50 transition-opacity">
+        <div class="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full mx-4 transform transition-transform">
+            <h3 id="modalTitle" class="text-lg font-bold text-gray-900 mb-2">বার্তা</h3>
+            <p id="modalMessage" class="text-sm text-gray-600 mb-6">...</p>
+            <div class="flex justify-end gap-3" id="modalActions">
+                <button id="modalBtnCancel" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 hidden">বাতিল</button>
+                <button id="modalBtnConfirm" class="px-4 py-2 text-sm font-medium text-white bg-brand-600 rounded-md hover:bg-brand-700">ঠিক আছে</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Default Configuration
+        const DEFAULT_STATE = {
+            layout: 'portrait',
+            orgName: 'আবদুর রাজ্জাক দাখিল মাদ্রাসা',
+            subTitle: 'মীরেরখীল, সরফভাটা, রাঙ্গুনিয়া, চট্টগ্রাম',
+            voucherType: 'ক্যাশ ভাউচার',
+            voucherNo: '',
+            date: new Date().toLocaleDateString('en-GB'), // Initial fallback
+            receiver: '',
+            items: [], // Empty default items list
+            sig1: 'গ্রহীতার স্বাক্ষর',
+            sig2: 'হিসাবরক্ষক',
+            sig3: 'সুপারিনটেনডেন্ট'
+        };
+
+        let state = { ...DEFAULT_STATE };
+
+        // DOM Elements mapping
+        const inputsToStateMap = {
+            inpOrgName: 'orgName',
+            inpSubTitle: 'subTitle',
+            inpVoucherType: 'voucherType',
+            inpVoucherNo: 'voucherNo',
+            inpDate: 'date',
+            inpReceiver: 'receiver',
+            inpSig1: 'sig1',
+            inpSig2: 'sig2',
+            inpSig3: 'sig3'
+        };
+
+        const DOM = {
+            layoutPortrait: document.getElementById('layoutPortrait'),
+            layoutLandscape: document.getElementById('layoutLandscape'),
+            itemsContainer: document.getElementById('itemsContainer'),
+            btnAddItem: document.getElementById('btnAddItem'),
+            outOrgName: document.getElementById('outOrgName'),
+            outSubTitle: document.getElementById('outSubTitle'),
+            outVoucherType: document.getElementById('outVoucherType'),
+            outVoucherNo: document.getElementById('outVoucherNo'),
+            outReceiver: document.getElementById('outReceiver'),
+            outDate: document.getElementById('outDate'),
+            outItemsBody: document.getElementById('outItemsBody'),
+            outGrandTotal: document.getElementById('outGrandTotal'),
+            outInWords: document.getElementById('outInWords'),
+            outSig1: document.getElementById('outSig1'),
+            outSig2: document.getElementById('outSig2'),
+            outSig3: document.getElementById('outSig3'),
+            printArea: document.getElementById('printArea'),
+            btnDownloadPdf: document.getElementById('btnDownloadPdf'),
+            btnPrint: document.getElementById('btnPrint'),
+            btnReset: document.getElementById('btnReset'),
+            
+            // Modal elements
+            modal: document.getElementById('customModal'),
+            modalTitle: document.getElementById('modalTitle'),
+            modalMessage: document.getElementById('modalMessage'),
+            modalBtnCancel: document.getElementById('modalBtnCancel'),
+            modalBtnConfirm: document.getElementById('modalBtnConfirm'),
+            modalActions: document.getElementById('modalActions')
+        };
+
+        // Utilities
+        function generateId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        const engToBenDigits = {'0':'০','1':'১','2':'২','3':'৩','4':'৪','5':'৫','6':'৬','7':'৭','8':'৮','9':'৯'};
+        function toBengaliNum(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[0-9]/g, match => engToBenDigits[match] || match);
+        }
+
+        // Improved Taka to Bengali Words function
+        function takaToBengaliWords(amount) {
+            if (!amount || isNaN(amount) || amount == 0) return "শূন্য টাকা মাত্র";
+            
+            let numStr = Math.floor(amount).toString();
+            
+            if (numStr.length > 9) return "অতিরিক্ত বড় সংখ্যা";
+
+            // Fixed mapping logic
+            const numMap = {
+                0:"", 1:"এক", 2:"দুই", 3:"তিন", 4:"চার", 5:"পাঁচ", 6:"ছয়", 7:"সাত", 8:"আট", 9:"নয়",
+                10:"দশ", 11:"এগারো", 12:"বারো", 13:"তেরো", 14:"চৌদ্দ", 15:"পনেরো", 16:"ষোল", 17:"সতেরো", 18:"আঠারো", 19:"উনিশ",
+                20:"বিশ", 21:"একুশ", 22:"বাইশ", 23:"তেইশ", 24:"চব্বিশ", 25:"পঁচিশ", 26:"ছাব্বিশ", 27:"সাতাশ", 28:"আঠাশ", 29:"উনত্রিশ",
+                30:"ত্রিশ", 31:"একত্রিশ", 32:"বত্রিশ", 33:"তেত্রিশ", 34:"চৌত্রিশ", 35:"পঁয়ত্রিশ", 36:"ছত্রিশ", 37:"সাঁইত্রিশ", 38:"আটত্রিশ", 39:"উনচল্লিশ",
+                40:"চল্লিশ", 41:"একচল্লিশ", 42:"বিয়াল্লিশ", 43:"তেতাল্লিশ", 44:"চুয়াল্লিশ", 45:"পঁয়তাল্লিশ", 46:"ছেচল্লিশ", 47:"সাতচল্লিশ", 48:"আটচল্লিশ", 49:"উনপঞ্চাশ",
+                50:"পঞ্চাশ", 51:"একান্ন", 52:"বায়ান্ন", 53:"তিপ্পান্ন", 54:"চুয়ান্ন", 55:"পঞ্চান্ন", 56:"ছাপ্পান্ন", 57:"সাতান্ন", 58:"আটান্ন", 59:"উনষাট",
+                60:"ষাট", 61:"একষট্টি", 62:"বাষট্টি", 63:"তেষট্টি", 64:"চৌষট্টি", 65:"পঁয়ষট্টি", 66:"ছেষট্টি", 67:"সাতষট্টি", 68:"আটষট্টি", 69:"উনসত্তর",
+                70:"সত্তর", 71:"একাত্তর", 72:"বাহাত্তর", 73:"তিয়াত্তর", 74:"চুয়াত্তর", 75:"পঁচাত্তর", 76:"ছিয়াত্তর", 77:"সাতাত্তর", 78:"আটাত্তর", 79:"উনআশি",
+                80:"আশি", 81:"একাশি", 82:"বিরাশি", 83:"তিরাশি", 84:"চুরাশি", 85:"পঁচাশি", 86:"ছিয়াশি", 87:"সাতাশি", 88:"অষ্টাশি", 89:"উননব্বই",
+                90:"নব্বই", 91:"একানব্বই", 92:"বিরানব্বই", 93:"তিরানব্বই", 94:"চুরানব্বই", 95:"পঁচানব্বই", 96:"ছিয়ানব্বই", 97:"সাতানব্বই", 98:"আটানব্বই", 99:"নিরানব্বই"
+            };
+
+            function getWord(n) {
+                return numMap[n] || ""; 
+            }
+
+            // Pad string to 9 digits with leading zeros for easier processing
+            // Format: Crore(2) Lakh(2) Thousand(2) Hundred(1) Tens(2)
+            let pStr = numStr.padStart(9, '0');
+            
+            let crore = parseInt(pStr.substring(0, 2));
+            let lakh = parseInt(pStr.substring(2, 4));
+            let thousand = parseInt(pStr.substring(4, 6));
+            let hundred = parseInt(pStr.substring(6, 7));
+            let tens = parseInt(pStr.substring(7, 9));
+
+            let parts = [];
+
+            if (crore > 0) parts.push(getWord(crore) + " কোটি");
+            if (lakh > 0) parts.push(getWord(lakh) + " লক্ষ");
+            if (thousand > 0) parts.push(getWord(thousand) + " হাজার");
+            if (hundred > 0) parts.push(getWord(hundred) + " শত");
+            if (tens > 0) parts.push(getWord(tens));
+
+            let wordResult = parts.join(" ");
+            return wordResult.trim() + " টাকা মাত্র।";
+        }
+
+        // Local Storage handling
+        function saveState() {
+            try {
+                localStorage.setItem('voucherGeneratorData', JSON.stringify(state));
+            } catch(e) {
+                console.error("Could not save state", e);
+            }
+        }
+
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('voucherGeneratorData');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    // Merge to ensure no missing properties if schema changes
+                    state = { ...DEFAULT_STATE, ...parsed };
+                }
+            } catch(e) {
+                console.error("Could not load state", e);
+            }
+        }
+
+        // Custom Modal Logic (Replacing alert/confirm)
+        let modalResolve = null;
+        
+        function showModal(title, message, isConfirm = false) {
+            return new Promise((resolve) => {
+                DOM.modalTitle.innerText = title;
+                DOM.modalMessage.innerText = message;
+                
+                if (isConfirm) {
+                    DOM.modalBtnCancel.classList.remove('hidden');
+                    DOM.modalBtnConfirm.innerText = "হ্যাঁ";
+                    DOM.modalBtnConfirm.classList.replace('bg-brand-600', 'bg-red-600');
+                    DOM.modalBtnConfirm.classList.replace('hover:bg-brand-700', 'hover:bg-red-700');
+                } else {
+                    DOM.modalBtnCancel.classList.add('hidden');
+                    DOM.modalBtnConfirm.innerText = "ঠিক আছে";
+                    DOM.modalBtnConfirm.classList.replace('bg-red-600', 'bg-brand-600');
+                    DOM.modalBtnConfirm.classList.replace('hover:bg-red-700', 'hover:bg-brand-700');
+                }
+                
+                DOM.modal.style.display = 'flex';
+                modalResolve = resolve;
+            });
+        }
+
+        DOM.modalBtnConfirm.addEventListener('click', () => {
+            DOM.modal.style.display = 'none';
+            if (modalResolve) modalResolve(true);
+        });
+
+        DOM.modalBtnCancel.addEventListener('click', () => {
+            DOM.modal.style.display = 'none';
+            if (modalResolve) modalResolve(false);
+        });
+
+        // Initialize HTML inputs from state
+        function initializeInputs() {
+            // Set input values
+            Object.keys(inputsToStateMap).forEach(id => {
+                const el = document.getElementById(id);
+                if (el && state[inputsToStateMap[id]] !== undefined) {
+                    el.value = state[inputsToStateMap[id]];
+                }
+            });
+        }
+
+        // Render the list of items in the left sidebar
+        function renderItemsList() {
+            DOM.itemsContainer.innerHTML = '';
+            
+            if (state.items.length === 0) {
+                DOM.itemsContainer.innerHTML = '<div class="text-center text-gray-500 py-6 text-sm bg-gray-50 rounded border border-dashed border-gray-300">কোনো খরচের বিবরণ নেই। "নতুন যোগ করুন" বাটনে ক্লিক করুন।</div>';
+            }
+            
+            state.items.forEach((item, index) => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'bg-gray-50 p-3 rounded-lg border border-gray-200 relative group transition-all hover:border-brand-300';
+                itemDiv.innerHTML = `
+                    <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="removeItem('${item.id}')" class="text-red-500 hover:text-red-700 bg-white rounded-full p-1 shadow-sm" title="মুছে ফেলুন">
+                            <i class="fas fa-trash-alt text-xs"></i>
+                        </button>
+                    </div>
+                    <div class="mb-2">
+                        <label class="block text-xs font-medium text-gray-500 mb-1">বিবরণ</label>
+                        <input type="text" value="${item.desc}" onchange="updateItem('${item.id}', 'desc', this.value)" class="w-full text-sm border-gray-300 rounded shadow-sm focus:ring-brand-500 p-1.5 border">
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="block text-xs font-medium text-gray-500 mb-1">পরিমাণ/একক</label>
+                            <input type="text" value="${item.qtyStr}" onchange="updateItem('${item.id}', 'qtyStr', this.value)" class="w-full text-sm border-gray-300 rounded shadow-sm focus:ring-brand-500 p-1.5 border" placeholder="যেমন: ৬৭ টি">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-medium text-gray-500 mb-1">হার (৳)</label>
+                            <input type="number" value="${item.rate}" onchange="updateItem('${item.id}', 'rate', this.value)" class="w-full text-sm border-gray-300 rounded shadow-sm focus:ring-brand-500 p-1.5 border text-right">
+                        </div>
+                    </div>
+                `;
+                DOM.itemsContainer.appendChild(itemDiv);
+            });
+            updatePreview();
+        }
+
+        // Global functions for inline HTML handlers
+        window.updateItem = function(id, field, value) {
+            const index = state.items.findIndex(i => i.id === id);
+            if (index !== -1) {
+                if (field === 'rate') {
+                    state.items[index][field] = Number(value) || 0;
+                } else {
+                    state.items[index][field] = value;
+                }
+                saveState();
+                updatePreview();
+            }
+        };
+
+        window.removeItem = async function(id) {
+            const confirmed = await showModal('নিশ্চিতকরণ', 'আপনি কি এই আইটেমটি মুছে ফেলতে চান?', true);
+            if (confirmed) {
+                state.items = state.items.filter(i => i.id !== id);
+                saveState();
+                renderItemsList();
+            }
+        };
+
+        DOM.btnAddItem.addEventListener('click', () => {
+            state.items.push({
+                id: generateId(),
+                desc: '',
+                qtyStr: '',
+                rate: ''
+            });
+            saveState();
+            renderItemsList();
+        });
+
+        // Layout Toggle
+        function setLayout(layoutStr) {
+            state.layout = layoutStr;
+            saveState();
+            
+            if (layoutStr === 'portrait') {
+                DOM.layoutPortrait.className = "flex-1 px-4 py-2 text-sm font-medium rounded-l-lg border bg-brand-50 border-brand-500 text-brand-700 z-10 focus:ring-2 focus:ring-brand-500";
+                DOM.layoutLandscape.className = "flex-1 px-4 py-2 text-sm font-medium rounded-r-lg border border-gray-200 bg-white text-gray-900 hover:bg-gray-100 hover:text-brand-700 focus:ring-2 focus:ring-brand-500";
+                
+                DOM.printArea.classList.remove('a5-landscape');
+                DOM.printArea.classList.add('a5-portrait');
+            } else {
+                DOM.layoutLandscape.className = "flex-1 px-4 py-2 text-sm font-medium rounded-r-lg border bg-brand-50 border-brand-500 text-brand-700 z-10 focus:ring-2 focus:ring-brand-500";
+                DOM.layoutPortrait.className = "flex-1 px-4 py-2 text-sm font-medium rounded-l-lg border border-gray-200 bg-white text-gray-900 hover:bg-gray-100 hover:text-brand-700 focus:ring-2 focus:ring-brand-500";
+                
+                DOM.printArea.classList.remove('a5-portrait');
+                DOM.printArea.classList.add('a5-landscape');
+            }
+        }
+
+        DOM.layoutPortrait.addEventListener('click', () => setLayout('portrait'));
+        DOM.layoutLandscape.addEventListener('click', () => setLayout('landscape'));
+
+        // Bind basic inputs to state and preview
+        Object.keys(inputsToStateMap).forEach(inputId => {
+            const el = document.getElementById(inputId);
+            if (el) {
+                el.addEventListener('input', (e) => {
+                    state[inputsToStateMap[inputId]] = e.target.value;
+                    saveState();
+                    updatePreview();
+                });
+            }
+        });
+
+        // Update the visual representation
+        function updatePreview() {
+            // Text values
+            DOM.outOrgName.innerText = state.orgName || 'প্রতিষ্ঠানের নাম';
+            DOM.outSubTitle.innerText = state.subTitle || 'ঠিকানা / ইভেন্ট';
+            DOM.outVoucherType.innerText = state.voucherType || 'ভাউচার';
+            
+            // Allow empty lines for manual fill if empty
+            DOM.outVoucherNo.innerHTML = state.voucherNo ? toBengaliNum(state.voucherNo) : '&nbsp;';
+            DOM.outReceiver.innerHTML = state.receiver ? state.receiver : '&nbsp;';
+            DOM.outDate.innerText = toBengaliNum(state.date);
+            
+            DOM.outSig1.innerText = state.sig1;
+            DOM.outSig2.innerText = state.sig2;
+            DOM.outSig3.innerText = state.sig3;
+
+            // Render Table
+            let tbodyHtml = '';
+            let grandTotal = 0;
+
+            state.items.forEach((item, index) => {
+                const total = Number(item.rate) || 0;
+                grandTotal += total;
+
+                tbodyHtml += `
+                    <tr>
+                        <td class="text-center">${toBengaliNum(index + 1)}</td>
+                        <td class="text-left">${item.desc}</td>
+                        <td class="text-center">${item.qtyStr ? toBengaliNum(item.qtyStr) : ''}</td>
+                        <td class="text-center">${item.rate ? toBengaliNum(Number(item.rate).toFixed(2)) : ''}</td>
+                        <td class="text-right">${total ? toBengaliNum(total.toFixed(2)) : ''}</td>
+                    </tr>
+                `;
+            });
+
+            // Dynamic Blank Rows Padding logic
+            // To keep layout looking good on paper, we add empty rows if items are few.
+            // If items = 1 -> 3 blanks, items = 2 -> 2 blanks, items = 3 -> 1 blank, items >= 4 -> 0 blanks
+            let blankRowsNeeded = Math.max(0, 4 - state.items.length);
+            
+            for (let i = 0; i < blankRowsNeeded; i++) {
+                tbodyHtml += `
+                    <tr>
+                        <td class="text-transparent border-gray-400 select-none">-</td>
+                        <td class="border-gray-400"></td>
+                        <td class="border-gray-400"></td>
+                        <td class="border-gray-400"></td>
+                        <td class="border-gray-400"></td>
+                    </tr>
+                `;
+            }
+
+            DOM.outItemsBody.innerHTML = tbodyHtml;
+            
+            // Totals and Words
+            DOM.outGrandTotal.innerText = toBengaliNum(grandTotal.toFixed(2));
+            DOM.outInWords.innerText = takaToBengaliWords(grandTotal);
+        }
+
+        // Reset Functionality
+        DOM.btnReset.addEventListener('click', async () => {
+            const confirmed = await showModal('রিসেট', 'আপনি কি নিশ্চিত যে আপনি সব ডেটা মুছে ডিফল্ট অবস্থায় ফিরে যেতে চান?', true);
+            if (confirmed) {
+                localStorage.removeItem('voucherGeneratorData');
+                state = { ...DEFAULT_STATE };
+                // Keep the current date
+                state.date = new Date().toLocaleDateString('en-GB'); 
+                
+                initializeInputs();
+                setLayout('portrait');
+                renderItemsList();
+                showModal('সফল', 'ডেটা সফলভাবে রিসেট করা হয়েছে।');
+            }
+        });
+
+        // Print Functionality
+        DOM.btnPrint.addEventListener('click', () => {
+            window.print();
+        });
+
+        // PDF Generation Functionality using html2pdf
+        DOM.btnDownloadPdf.addEventListener('click', async () => {
+            const confirmed = await showModal('সতর্কতা (PDF ফন্ট)', 'সরাসরি PDF ডাউনলোড করলে অনেক সময় বাংলা ফন্ট/যুক্তবর্ণ ভেঙে যেতে পারে।\n\nসবচেয়ে ভালো ফন্টের জন্য "সরাসরি প্রিন্ট" বাটনে ক্লিক করে Destination হিসেবে "Save as PDF" অপশনটি বেছে নেওয়া উত্তম।\n\nআপনি কি তবুও এখান থেকেই PDF ডাউনলোড করতে চান?', true);
+            if (!confirmed) return;
+
+            const element = document.getElementById('printArea');
+            
+            // Add a temporary wrapper to ensure styles are applied correctly during render
+            const opt = {
+                margin:       5,
+                filename:     `Voucher_${state.orgName}_${Date.now()}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { 
+                    unit: 'mm', 
+                    format: 'a5', 
+                    orientation: state.layout === 'landscape' ? 'landscape' : 'portrait' 
+                }
+            };
+
+            // Change button state to show progress
+            const originalText = DOM.btnDownloadPdf.innerHTML;
+            DOM.btnDownloadPdf.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> তৈরি হচ্ছে...';
+            DOM.btnDownloadPdf.disabled = true;
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                DOM.btnDownloadPdf.innerHTML = originalText;
+                DOM.btnDownloadPdf.disabled = false;
+            }).catch(err => {
+                console.error("PDF generation error:", err);
+                showModal('ত্রুটি', 'PDF তৈরি করতে সমস্যা হয়েছে। দয়া করে আবার চেষ্টা করুন।');
+                DOM.btnDownloadPdf.innerHTML = originalText;
+                DOM.btnDownloadPdf.disabled = false;
+            });
+        });
+
+        // Boot up the application
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set initial date format to today's date in local format if not loaded from state
+            const today = new Date().toLocaleDateString('en-GB'); // DD/MM/YYYY
+            DEFAULT_STATE.date = today;
+            
+            loadState(); // Load saved data if exists
+            
+            initializeInputs(); // Populate inputs
+            setLayout(state.layout); // Apply saved layout
+            renderItemsList(); // This also calls updatePreview()
+        });
+
+    </script>
+</body>
+</html>
