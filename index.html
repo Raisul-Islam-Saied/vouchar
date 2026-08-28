@@ -4,13 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>রেজাল্ট পোর্টাল | আবদুর রাজ্জাক দাখিল মাদ্রাসা</title>
-<!-- <link> ট্যাগগুলো মুছে ফেলুন -->
+
 <style>
-  /* ঠিক React ফাইলের মতো @import করে ফন্ট যুক্ত করুন */
+  /* React-এর মতো হুবহু @import করে ফন্ট যুক্ত করা হলো */
   @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;700&display=swap');
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+Bengali:wght@400;500;600;700;800&display=swap');
-
 
   /* ==========================================================
      DESIGN TOKENS
@@ -235,10 +234,21 @@
   /* ==========================================================
      HIDDEN CAPTURE NODE — exact replica of the original
      marksheet design used ONLY for the downloaded PNG.
-     Do not restyle: this must render pixel-identical to the
-     previously approved marksheet.
   ========================================================== */
   #printWrapper{ display:none; background:#ffffff; }
+
+  /* 💡 Tailwind Reset - React এর হুবহু ডিজাইন পাওয়ার জন্য */
+  #printWrapper {
+    line-height: 1.5;
+    color: #0f172a;
+  }
+  #printWrapper * {
+    box-sizing: border-box;
+  }
+  #printWrapper h1, #printWrapper h2, #printWrapper h3, #printWrapper p {
+    margin: 0;
+  }
+
   #printWrapper .print-outer{
     min-height:auto;background:#fff;display:flex;flex-direction:column;
     align-items:center;justify-content:flex-start;padding-bottom:20px;
@@ -279,7 +289,7 @@
     padding-bottom:10px;
     margin-bottom:15px;
   }
-  #printWrapper .inst-info h1{font-size:36px;color:#000;margin:0;font-weight:700;line-height:1.2;}
+  #printWrapper .inst-info h1{font-size:36px;color:#000;font-weight:700;line-height:1.2;}
   #printWrapper .inst-address{font-size:15px;color:#222;margin:3px 0;font-weight:500;}
   #printWrapper .exam-badge{
     background:black;color:white;padding:5px 25px;border-radius:20px;
@@ -609,7 +619,7 @@
       var i4=[ "অকৃতকার্য হওয়ার বিষয়টি হতাশাজনক। মূলত "+weakText+" বেসিক ঘাটতির কারণেই এই ফলাফল।",
                "পড়াশোনায় অমনোযোগিতার কারণেই আশানুরূপ ফলাফল হয়নি। তাকে আরও অনেক বেশি যত্নশীল হতে হবে।",
                "আশা অনুযায়ী ফলাফল আসেনি। ভুল থেকে শিক্ষা নিয়ে তাকে শক্তভাবে ঘুরে দাঁড়াতে হবে।" ];
-      var m4=[ weakText+" স্পেশাল কেয়ার নেওয়া প্রয়োজন। নতুবা এই গ্যাপ পূরণ করা সম্ভব হবে না।",
+      var m4=[ weakText+" স্পেশাল কেয়ার নেওয়া প্রয়োজন। নতুবা এই গ্যাপ পূরণ করা সম্ভব হবে বাঙাল।",
                "নিয়মিত পড়ার টেবিলে বসার অভ্যাস না থাকলে আগামীতেও ফলাফল খারাপ হওয়ার আশঙ্কা রয়েছে।" ];
       remark = pickAI(i4,seed) + " " + pickAI(m4,seed+1);
     }
@@ -974,12 +984,6 @@
     printInner.innerHTML = html;
 
     // Replicate the original CSS cascade exactly:
-    // ".result-table th/td { padding: ${pad} }" plus
-    // ".result-table td:first-child { padding-left: 20px }" (which only
-    // overrides padding-left, leaving top/bottom/right from the rule above).
-    // Setting a full inline `padding` shorthand on every cell would wipe out
-    // that 20px left padding on the first column — so first-child cells get
-    // their four sides set individually instead.
     var padParts = pad.split(' ');
     var vertical = padParts[0], horizontal = padParts[1];
     var table = printInner.querySelector('#dlResultTable');
@@ -1008,10 +1012,12 @@
 
     buildPrintNode(currentComputed);
 
+    // 💡 FIXED: Scroll offset bug preventer
     wrapper.style.display = 'block';
-    wrapper.style.position = 'absolute';
-    wrapper.style.top = '-99999px';
-    wrapper.style.left = '0';
+    wrapper.style.position = 'fixed'; // Changed to fixed
+    wrapper.style.top = '0px';        // Changed to 0
+    wrapper.style.left = '0px';       // Changed to 0
+    wrapper.style.zIndex = '-9999';
     wrapper.style.width = '794px';
     wrapper.style.height = '1123px';
 
