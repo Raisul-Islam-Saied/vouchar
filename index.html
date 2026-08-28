@@ -107,7 +107,7 @@
     color:var(--ink);
     background:#fff;
     outline:none;
-    font-weight: 600; /* 💡 Number Font Weight Fix */
+    font-weight: 700;
   }
   .field select:focus,.field input:focus{
     border-color:var(--brand);
@@ -173,7 +173,7 @@
     padding:10px 12px;font-size:14px;text-align:left;
   }
   .info-table th{background:var(--brand-soft);color:var(--brand);font-weight:700;white-space:nowrap;width:1%;}
-  .info-table td{font-weight:600;color:var(--ink);} /* 💡 Number Font Weight Fix */
+  .info-table td{font-weight:700;color:var(--ink);}
   .info-table .en-name{letter-spacing:.3px;}
 
   .subjects-table{margin-bottom:18px;font-size:13.5px;}
@@ -184,17 +184,17 @@
   .subjects-table td{
     border:1px solid var(--line-strong);padding:8px;text-align:center;color:var(--ink);
   }
-  .subjects-table td:first-child{text-align:left;font-weight:700;padding-left: 14px;} /* 💡 Subject Left Padding */
-  .subjects-table td:not(:first-child){font-weight:600;} /* 💡 Number Font Weight Fix (was already 600) */
+  .subjects-table td:first-child{text-align:left;font-weight:700;padding-left: 14px;} 
+  .subjects-table td:not(:first-child){font-weight:700;} 
   .subjects-table tbody tr:nth-child(even){background:#f7f6f1;}
 
   .summary-table{margin-bottom:18px;}
   .summary-table th,.summary-table td{
     border:1px solid var(--line-strong);padding:10px 12px;font-size:14px;text-align:left;
   }
-  .summary-table th{background:var(--brand-soft);color:var(--brand);font-weight:700;width:26%;} /* 💡 Width increased from 22% to 26% */
-  .summary-table td{font-weight:600;color:var(--ink);width:24%;} /* 💡 Width updated, Font Weight Fix */
-  .summary-table .result-row th{width:28%;} /* 💡 Width increased */
+  .summary-table th{background:var(--brand-soft);color:var(--brand);font-weight:700;width:28%;} 
+  .summary-table td{font-weight:700;color:var(--ink);width:22%;} 
+  .summary-table .result-row th{width:28%;} 
   .summary-table .result-row td{font-family:var(--font-serif);font-size:16px;font-weight:800;letter-spacing:.3px;}
   .summary-table .pass{color:var(--success);}
   .summary-table .fail{color:var(--danger);}
@@ -362,7 +362,7 @@
     <section id="searchView" class="search-view">
       <div class="search-card">
         <h2>একাডেমিক ফলাফল অনুসন্ধান</h2>
-        <p class="lead">শ্রেণি, পরীক্ষা, শিক্ষাবর্ষ এবং রোল অথবা আইডি নম্বর প্রদান করে আপনার ফলাফল দেখুন।</p>
+        <p class="lead">শ্রেণি, পরীক্ষা, শিক্ষাবর্ষ এবং রোল অথবা আইডি নম্বর প্রদান করে আপনার ফলাফল দেখুন。</p>
 
         <div id="statusBox" class="status-box" hidden></div>
 
@@ -667,7 +667,7 @@
   function hideStatus(){ statusBox.hidden = true; }
 
   /* ==========================================================
-     FETCH PUBLISHED EXAMS (WITH AUTO-SELECT)
+     FETCH PUBLISHED EXAMS
   ========================================================== */
   function fetchAllExams(){
     return fetch(GOOGLE_SCRIPT_URL, { method:'GET', headers:{'Content-Type':'text/plain'}, redirect:'follow' })
@@ -677,7 +677,6 @@
         try { result = JSON.parse(text); }
         catch(e){ throw new Error('সার্ভার থেকে সঠিক তথ্য পাওয়া যায়নি।'); }
         if (result.status !== 'success') throw new Error(result.message || 'তথ্য লোড করতে সমস্যা হয়েছে।');
-        
         var valid = (result.data || []).filter(function(s){ return String(s.sheetName).startsWith('['); });
         valid.sort(function(a,b){
           var ta = parseSheetName(a.sheetName).timestamp || 0;
@@ -685,24 +684,11 @@
           return tb - ta;
         });
         publishedExams = valid;
-
-        // 💡 Auto-Select Recent Exam & Year
-        if (publishedExams.length > 0) {
-          var latest = parseSheetName(publishedExams[0].sheetName);
-          if (!fExam.value) {
-            var examExists = Array.from(fExam.options).some(function(opt){ return opt.value === latest.examName; });
-            if (examExists) fExam.value = latest.examName;
-          }
-          if (!fYear.value) {
-            var yearExists = Array.from(fYear.options).some(function(opt){ return opt.value === latest.year; });
-            if (yearExists) fYear.value = latest.year;
-          }
-        }
       });
   }
 
   /* ==========================================================
-     SEARCH WITH FAKE LOADING
+     SEARCH
   ========================================================== */
   function performSearch(cls, exam, year, id){
     hideStatus();
@@ -710,47 +696,39 @@
       showStatus('অনুগ্রহ করে সবগুলো তথ্য প্রদান করুন।', 'error');
       return Promise.resolve();
     }
-    
-    // 💡 Enable Button Spinner (Fake Loader)
-    var originalBtnText = searchBtn.textContent;
     searchBtn.disabled = true;
-    searchBtn.innerHTML = '<svg class="spin-icon" style="margin-right:8px; vertical-align:-3px;" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg> খোঁজা হচ্ছে...';
+    searchBtn.textContent = 'খোঁজা হচ্ছে...';
 
     var prefix = '['+cls+']['+exam+']['+year+']';
     var targetSheet = publishedExams.filter(function(s){ return s.sheetName.indexOf(prefix) === 0; })[0];
 
-    // 💡 Create Fake 1 Second Delay Promise
-    var fakeDelay = new Promise(function(resolve) { setTimeout(resolve, 1000); });
+    if (!targetSheet){
+      searchBtn.disabled = false; searchBtn.textContent = 'ফলাফল দেখুন';
+      showStatus('এই তথ্য অনুযায়ী কোনো ফলাফল প্রকাশিত হয়নি।', 'error');
+      return Promise.resolve();
+    }
+    var sheetInfo = parseSheetName(targetSheet.sheetName);
+    if (sheetInfo.timestamp && Date.now() < sheetInfo.timestamp){
+      searchBtn.disabled = false; searchBtn.textContent = 'ফলাফল দেখুন';
+      showStatus('রেজাল্ট এখনো প্রকাশিত হয়নি। অনুগ্রহ করে পরে আবার চেষ্টা করুন।', 'error');
+      return Promise.resolve();
+    }
 
-    var dataFetch = new Promise(function(resolve, reject){
-      if (!targetSheet){
-        return reject(new Error('এই তথ্য অনুযায়ী কোনো ফলাফল প্রকাশিত হয়নি।'));
-      }
-      var sheetInfo = parseSheetName(targetSheet.sheetName);
-      if (sheetInfo.timestamp && Date.now() < sheetInfo.timestamp){
-        return reject(new Error('রেজাল্ট এখনো প্রকাশিত হয়নি। অনুগ্রহ করে পরে আবার চেষ্টা করুন।'));
-      }
+    var fetchSheet;
+    if (cachedSheets[targetSheet.sheetName]){
+      fetchSheet = Promise.resolve(cachedSheets[targetSheet.sheetName]);
+    } else {
+      fetchSheet = fetch(GOOGLE_SCRIPT_URL, {
+        method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body: JSON.stringify({ action:'search', sheetName: targetSheet.sheetName, key:'' })
+      }).then(function(res){ return res.json(); }).then(function(result){
+        if (result.status !== 'success') throw new Error(result.message || 'তথ্য পাওয়া যায়নি।');
+        cachedSheets[targetSheet.sheetName] = result.data;
+        return result.data;
+      });
+    }
 
-      if (cachedSheets[targetSheet.sheetName]){
-        resolve({ data: cachedSheets[targetSheet.sheetName], sheetInfo: sheetInfo });
-      } else {
-        fetch(GOOGLE_SCRIPT_URL, {
-          method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body: JSON.stringify({ action:'search', sheetName: targetSheet.sheetName, key:'' })
-        }).then(function(res){ return res.json(); }).then(function(result){
-          if (result.status !== 'success') throw new Error(result.message || 'তথ্য পাওয়া যায়নি।');
-          cachedSheets[targetSheet.sheetName] = result.data;
-          resolve({ data: result.data, sheetInfo: sheetInfo });
-        }).catch(reject);
-      }
-    });
-
-    // 💡 Wait for BOTH the API Call and the 1-sec Fake Delay
-    Promise.all([dataFetch, fakeDelay]).then(function(results){
-      var resultObj = results[0];
-      var sheetData = resultObj.data;
-      var sheetInfo = resultObj.sheetInfo;
-
+    return fetchSheet.then(function(sheetData){
       var headers = sheetData[0];
       var idIndex = headers.findIndex(function(h){ return String(h).split(' [')[0].trim().toLowerCase() === 'id'; });
       var rollIndex = headers.findIndex(function(h){ return String(h).split(' [')[0].trim().toLowerCase() === 'roll'; });
@@ -763,7 +741,8 @@
       })[0];
 
       if (!studentRow){
-        throw new Error('উক্ত রোল/আইডি নম্বরে কোনো ফলাফল পাওয়া যায়নি।');
+        showStatus('উক্ত রোল/আইডি নম্বরে কোনো ফলাফল পাওয়া যায়নি।', 'error');
+        return;
       }
 
       var highestMarks = [];
@@ -782,12 +761,10 @@
       try { window.history.pushState({}, '', '?id=' + shortId); } catch(e){}
 
       renderResult({ headers: headers, data: studentRow, highestMarks: highestMarks, sheetInfo: sheetInfo });
-
     }).catch(function(err){
       showStatus(err.message || 'ফলাফল পাওয়া যায়নি।', 'error');
     }).finally(function(){
-      searchBtn.disabled = false;
-      searchBtn.innerHTML = originalBtnText; // 💡 Restore Original Text
+      searchBtn.disabled = false; searchBtn.textContent = 'ফলাফল দেখুন';
     });
   }
 
