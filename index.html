@@ -237,7 +237,7 @@
   ========================================================== */
   #printWrapper{ display:none; background:#ffffff; }
 
-  /* 💡 Tailwind Reset - React এর হুবহু ডিজাইন পাওয়ার জন্য */
+  /* Tailwind Reset - React এর হুবহু ডিজাইন পাওয়ার জন্য */
   #printWrapper {
     line-height: 1.5;
     color: #0f172a;
@@ -619,7 +619,7 @@
       var i4=[ "অকৃতকার্য হওয়ার বিষয়টি হতাশাজনক। মূলত "+weakText+" বেসিক ঘাটতির কারণেই এই ফলাফল।",
                "পড়াশোনায় অমনোযোগিতার কারণেই আশানুরূপ ফলাফল হয়নি। তাকে আরও অনেক বেশি যত্নশীল হতে হবে।",
                "আশা অনুযায়ী ফলাফল আসেনি। ভুল থেকে শিক্ষা নিয়ে তাকে শক্তভাবে ঘুরে দাঁড়াতে হবে।" ];
-      var m4=[ weakText+" স্পেশাল কেয়ার নেওয়া প্রয়োজন। নতুবা এই গ্যাপ পূরণ করা সম্ভব হবে বাঙাল।",
+      var m4=[ weakText+" স্পেশাল কেয়ার নেওয়া প্রয়োজন। নতুবা এই গ্যাপ পূরণ করা সম্ভব হবে না।",
                "নিয়মিত পড়ার টেবিলে বসার অভ্যাস না থাকলে আগামীতেও ফলাফল খারাপ হওয়ার আশঙ্কা রয়েছে।" ];
       remark = pickAI(i4,seed) + " " + pickAI(m4,seed+1);
     }
@@ -1016,7 +1016,7 @@
     wrapper.style.display = 'block';
     wrapper.style.position = 'fixed'; // Changed to fixed
     wrapper.style.top = '0px';        // Changed to 0
-    wrapper.style.left = '0px';       // Changed to 0
+    wrapper.style.left = '-99999px';       // Changed to 0
     wrapper.style.zIndex = '-9999';
     wrapper.style.width = '794px';
     wrapper.style.height = '1123px';
